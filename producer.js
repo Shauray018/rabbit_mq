@@ -1,30 +1,17 @@
 const amqp = require("amqplib"); 
 
-async function sendMail() {
+async function sendMessage(routingKey, message) {
     try { 
         const connection = await amqp.connect("amqp://localhost"); 
         const channel = await connection.createChannel(); 
-        const exchange = "mail_exchange"; 
-        const routingKeyOne = "send_mail_to_user";
-        const routingKeyTwo = "send_mail_to_subscribed_users";  
+        const exchange = "notification_exchange"; 
+        const exchangeType = "topic";
 
-        const message = { 
-            to: "arun@gmail.com",
-            from: "oji@gmail.com", 
-            subject: "thanks", 
-            body: "hello chacha"
-        }
+        await channel.assertExchange(exchange, exchangeType, {durable: false});
+        
 
-        await channel.assertExchange(exchange, "direct", {durable: false});
-                
-        await channel.assertQueue("mail_queue_to_user", {durable: false});
-        await channel.assertQueue("mail_queue_to_subscribed_users", {durable: false});
-
-        await channel.bindQueue("mail_queue_to_user", exchange, routingKeyOne);
-        await channel.bindQueue("mail_queue_to_subscribed_users", exchange, routingKeyTwo); 
-
-        channel.publish(exchange, routingKeyTwo, Buffer.from(JSON.stringify(message))); 
-        console.log("Mail data was sent", message); 
+        channel.publish(exchange, routingKey, Buffer.from(JSON.stringify(message)), {persistent: true}); 
+        console.log("Mail data was sent", routingKey, message); 
 
         setTimeout(() => { 
             connection.close(); 
@@ -34,4 +21,22 @@ async function sendMail() {
     }
 }
 
-sendMail(); 
+sendMessage("order.placed", {orderId: 1234, status: "placed"}); 
+sendMessage("payment.processed", {paymentId: 5678, status: "processed"})
+
+
+// const routingKeyOne = "send_mail_to_user";
+        // const routingKeyTwo = "send_mail_to_subscribed_users";  
+
+        // const message = { 
+        //     to: "arun@gmail.com",
+        //     from: "oji@gmail.com", 
+        //     subject: "thanks", 
+        //     body: "hello chacha"
+        // }
+        
+        // await channel.assertQueue("mail_queue_to_user", {durable: false});
+        // await channel.assertQueue("mail_queue_to_subscribed_users", {durable: false});
+
+        // await channel.bindQueue("mail_queue_to_user", exchange, routingKeyOne);
+        // await channel.bindQueue("mail_queue_to_subscribed_users", exchange, routingKeyTwo); 
