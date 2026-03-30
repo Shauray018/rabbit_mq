@@ -1,17 +1,19 @@
 const amqp = require("amqplib"); 
 
-async function sendMessage(routingKey, message) {
+async function sendMessage(product) {
     try { 
         const connection = await amqp.connect("amqp://localhost"); 
-        const channel = await connection.createChannel(); 
-        const exchange = "notification_exchange"; 
-        const exchangeType = "topic";
+        const channel = await connection.createChannel();
+
+        const exchange = "new_product_launch"; 
+        const exchangeType = "fanout";
 
         await channel.assertExchange(exchange, exchangeType, {durable: false});
-        
 
-        channel.publish(exchange, routingKey, Buffer.from(JSON.stringify(message)), {persistent: true}); 
-        console.log("Mail data was sent", routingKey, message); 
+        const message = JSON.stringify(product);
+
+        channel.publish(exchange, "", Buffer.from(message), {persistent: true}); 
+        console.log(" Sent =>", message); 
 
         setTimeout(() => { 
             connection.close(); 
@@ -21,8 +23,10 @@ async function sendMessage(routingKey, message) {
     }
 }
 
-sendMessage("order.placed", {orderId: 1234, status: "placed"}); 
-sendMessage("payment.processed", {paymentId: 5678, status: "processed"})
+sendMessage({id: 123, name: "iphone 19 Pro", price: 200000})
+
+// sendMessage("order.placed", {orderId: 1234, status: "placed"}); 
+// sendMessage("payment.processed", {paymentId: 5678, status: "processed"})
 
 
 // const routingKeyOne = "send_mail_to_user";
