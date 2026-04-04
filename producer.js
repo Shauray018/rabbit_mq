@@ -1,19 +1,21 @@
 const amqp = require("amqplib"); 
 
-async function sendMessage(product) {
+async function sendNotification(headers, message) {
     try { 
         const connection = await amqp.connect("amqp://localhost"); 
         const channel = await connection.createChannel();
 
-        const exchange = "new_product_launch"; 
-        const exchangeType = "fanout";
+        const exchange = "header_exchange"; 
+        const exchangeType = "headers";
 
         await channel.assertExchange(exchange, exchangeType, {durable: false});
 
-        const message = JSON.stringify(product);
+        channel.publish(exchange, "", Buffer.from(message), {
+            persistent: true, 
+            headers
+        }); 
 
-        channel.publish(exchange, "", Buffer.from(message), {persistent: true}); 
-        console.log(" Sent =>", message); 
+        console.log("Sent notification with headers!!"); 
 
         setTimeout(() => { 
             connection.close(); 
@@ -23,7 +25,17 @@ async function sendMessage(product) {
     }
 }
 
-sendMessage({id: 123, name: "iphone 19 Pro", price: 200000})
+sendNotification({"x-match": "all", "notification-type": "new_video", "content_type": "video"}, "new music video is uploaded"); 
+sendNotification({"x-match": "all", "notification-type": "live_stream", "content_type": "gaming"}, "new music video is uploaded")
+sendNotification({"x-match": "any", "notification-type-comment": "comment", "content_type": "vlog"}, "new music video is uploaded")
+sendNotification({"x-match": "any", "notification-type-like": "like", "content_type": "vlog"}, "new music video is uploaded")
+
+
+
+
+
+
+// sendMessage({id: 123, name: "iphone 19 Pro", price: 200000})
 
 // sendMessage("order.placed", {orderId: 1234, status: "placed"}); 
 // sendMessage("payment.processed", {paymentId: 5678, status: "processed"})
